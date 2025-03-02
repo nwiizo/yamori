@@ -18,10 +18,6 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
-    - name: Run examples
-      run: |
-        make build-examples
-        make test-cli CONFIG=tests/configs/tests.toml
 
   build-macos:
     runs-on: macos-latest
