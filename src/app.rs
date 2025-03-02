@@ -118,20 +118,12 @@ impl App {
         (passed, total, pass_rate)
     }
 
-    pub fn get_command_details(
-        &self,
-    ) -> Option<(
-        &str,
-        &[String],
-        Option<&String>,
-        u128,
-        bool,
-        Option<&Vec<String>>,
-    )> {
+    #[allow(clippy::type_complexity)]
+    pub fn get_command_details(&self) -> Option<(&str, &[String], Option<&String>, u128, bool, Option<&Vec<String>>)> {
         if self.test_results.is_empty() {
             return None;
         }
-
+        
         let test = &self.test_results[self.selected_test];
         Some((
             &test.command,
@@ -139,7 +131,7 @@ impl App {
             test.input.as_ref(),
             test.execution_time.as_millis(),
             test.is_release,
-            test.build_commands.as_ref(),
+            test.build_commands.as_ref()
         ))
     }
 

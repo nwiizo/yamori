@@ -373,9 +373,8 @@ pub trait CommandExt {
 impl CommandExt for std::process::Child {
     fn wait_timeout(&mut self, timeout: Duration) -> Result<Option<std::process::ExitStatus>> {
         // 最初に即時終了しているかチェック
-        match self.try_wait()? {
-            Some(status) => return Ok(Some(status)),
-            None => {}
+        if let Some(status) = self.try_wait()? {
+            return Ok(Some(status));
         }
 
         // タイムアウト処理
@@ -383,13 +382,11 @@ impl CommandExt for std::process::Child {
         let start = std::time::Instant::now();
 
         while start.elapsed() < timeout {
-            match self.try_wait()? {
-                Some(status) => return Ok(Some(status)),
-                None => {
-                    // 短い間隔でポーリング
-                    std::thread::sleep(Duration::from_millis(100));
-                }
+            if let Some(status) = self.try_wait()? {
+                return Ok(Some(status));
             }
+            // 短い間隔でポーリング
+            std::thread::sleep(Duration::from_millis(100));
         }
 
         // タイムアウト
