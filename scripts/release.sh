@@ -163,15 +163,52 @@ if ! gh auth status &>/dev/null; then
     exit 1
 fi
 
-# Cargo.tomlのバージョンを更新
-print_info "Updating version in Cargo.toml to ${VERSION#v}..."
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS
-    sed -i '' "s/^version = .*/version = \"${VERSION#v}\"/" Cargo.toml
-else
-    # Linux and others
-    sed -i "s/^version = .*/version = \"${VERSION#v}\"/" Cargo.toml
-fi
+# Manually fix the Cargo.toml file
+print_info "Manually fixing Cargo.toml dependencies..."
+cat > Cargo.toml << EOF
+[package]
+name = "yamori"
+version = "0.1.0"
+edition = "2021"
+authors = ["nwiizo <nwiizo@gmail.com>"]
+description = "A test runner and visualizer for command-line applications"
+repository = "https://github.com/nwiizo/yamori"
+license = "MIT"
+readme = "README.md"
+keywords = ["testing", "tui", "cli", "visualization"]
+categories = ["command-line-utilities", "development-tools::testing"]
+
+[dependencies]
+
+[dependencies.anyhow]
+version = "1.0.0"
+
+[dependencies.similar]
+version = "2.7.0"
+
+[dependencies.clap]
+version = "4.5.0"
+features = ["derive"]
+
+[dependencies.crossterm]
+version = "0.28.0"
+
+[dependencies.ratatui]
+version = "0.29.0"
+
+[dependencies.serde]
+version = "1.0.0"
+features = ["derive"]
+
+[dependencies.serde_yaml]
+version = "0.9"
+
+[dependencies.toml]
+version = "0.8"
+
+[dependencies.chrono]
+version = "0.4"
+EOF
 
 # cargo fmt を実行してフォーマットを整える
 print_info "Running cargo fmt..."
