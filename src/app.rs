@@ -1,5 +1,5 @@
-use crate::test::{TestResult, TestConfig};
-use std::time::{SystemTime, UNIX_EPOCH, Instant};
+use crate::test::{TestConfig, TestResult};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 // テスト実行の履歴を保存する構造体
 #[derive(Clone)]
@@ -46,7 +46,7 @@ impl App {
             test_results: test_results.clone(),
             release_mode: false,
         };
-        
+
         App {
             test_results,
             config,
@@ -99,7 +99,7 @@ impl App {
 
     pub fn toggle_release_mode(&mut self) {
         self.release_mode = !self.release_mode;
-        
+
         // ビルド設定を更新
         if let Some(build) = &mut self.config.build {
             build.release = self.release_mode;
@@ -114,15 +114,24 @@ impl App {
         } else {
             0.0
         };
-        
+
         (passed, total, pass_rate)
     }
-    
-    pub fn get_command_details(&self) -> Option<(&str, &[String], Option<&String>, u128, bool, Option<&Vec<String>>)> {
+
+    pub fn get_command_details(
+        &self,
+    ) -> Option<(
+        &str,
+        &[String],
+        Option<&String>,
+        u128,
+        bool,
+        Option<&Vec<String>>,
+    )> {
         if self.test_results.is_empty() {
             return None;
         }
-        
+
         let test = &self.test_results[self.selected_test];
         Some((
             &test.command,
@@ -130,7 +139,7 @@ impl App {
             test.input.as_ref(),
             test.execution_time.as_millis(),
             test.is_release,
-            test.build_commands.as_ref()
+            test.build_commands.as_ref(),
         ))
     }
 
@@ -143,17 +152,17 @@ impl App {
             test_results: self.test_results.clone(),
             release_mode: self.release_mode,
         };
-        
+
         self.history.push(history_entry);
         self.selected_history = self.history.len() - 1;
     }
-    
+
     pub fn toggle_history_view(&mut self) {
         // 履歴タブに切り替える
         self.tab_index = 4; // History tab
         self.selected_history = self.history.len() - 1;
     }
-    
+
     pub fn next_history(&mut self) {
         if !self.history.is_empty() {
             self.selected_history = (self.selected_history + 1) % self.history.len();
@@ -165,7 +174,7 @@ impl App {
             }
         }
     }
-    
+
     pub fn previous_history(&mut self) {
         if !self.history.is_empty() {
             self.selected_history = if self.selected_history > 0 {
@@ -181,24 +190,27 @@ impl App {
             }
         }
     }
-    
+
     pub fn get_history_stats(&self) -> Vec<(u64, usize, usize, bool)> {
-        self.history.iter().map(|h| {
-            let total = h.test_results.len();
-            let passed = h.test_results.iter().filter(|r| r.success).count();
-            (h.timestamp, passed, total, h.release_mode)
-        }).collect()
+        self.history
+            .iter()
+            .map(|h| {
+                let total = h.test_results.len();
+                let passed = h.test_results.iter().filter(|r| r.success).count();
+                (h.timestamp, passed, total, h.release_mode)
+            })
+            .collect()
     }
-    
+
     pub fn reset_ui_state(&mut self) {
         // 選択されているテストが範囲外になっていないか確認
         if !self.test_results.is_empty() && self.selected_test >= self.test_results.len() {
             self.selected_test = 0;
         }
-        
+
         // タブを結果表示に戻す
         self.tab_index = 0;
-        
+
         // 履歴表示モードをオフにする
         self.viewing_history = false;
     }
@@ -219,7 +231,7 @@ impl App {
         self.show_popup = false;
         self.popup_type = PopupType::None;
     }
-    
+
     // 結果ポップアップを表示
     pub fn show_result_popup(&mut self, message: String) {
         self.result_popup_visible = true;
@@ -228,7 +240,7 @@ impl App {
         // ResultNotificationを使用して警告を解消
         self.popup_type = PopupType::ResultNotification;
     }
-    
+
     // 結果ポップアップを更新（時間経過で消える）
     pub fn update_result_popup(&mut self) -> bool {
         if let Some(time) = self.result_popup_time {
@@ -241,4 +253,4 @@ impl App {
         }
         false // 状態は変わっていない
     }
-} 
+}
