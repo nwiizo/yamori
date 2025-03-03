@@ -11,7 +11,7 @@ keywords = ["testing", "tui", "cli", "visualization"]
 categories = ["command-line-utilities", "development-tools::testing"]
 
 [dependencies]
-anyhow = "1.0.79"
+anyhow = "1.0.97"
 similar = "2.7.0"
 clap = { version = "4.5.0", features = ["derive"] }
 crossterm = "0.28.0"
