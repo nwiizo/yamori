@@ -13,7 +13,7 @@ categories = ["command-line-utilities", "development-tools::testing"]
 [dependencies]
 anyhow = "1.0.79"
 similar = "2.7.0"
-clap = { version = "4.5.0", features = ["derive"] }
+clap = { version = "4.5.35", features = ["derive"] }
 crossterm = "0.28.0"
 ratatui = "0.29.0"
 serde = { version = "1.0.196", features = ["derive"] }
