@@ -1,7 +1,6 @@
 use crate::app::{App, PopupType};
 use chrono::{DateTime, TimeZone, Utc};
 use ratatui::{
-    backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line as TextLine, Span},
@@ -13,12 +12,12 @@ use ratatui::{
 };
 use similar::ChangeTag;
 
-pub fn render_ui<B: Backend>(frame: &mut Frame, app: &App) {
+pub fn render_ui(frame: &mut Frame, app: &App) {
     let size = frame.area();
 
     if app.show_help {
         // Show help overlay
-        render_help::<B>(frame, size);
+        render_help(frame, size);
     } else {
         // Main UI
         let main_chunks = Layout::default()
@@ -35,37 +34,37 @@ pub fn render_ui<B: Backend>(frame: &mut Frame, app: &App) {
             .split(size);
 
         // Title
-        render_title::<B>(frame, main_chunks[0]);
+        render_title(frame, main_chunks[0]);
 
         // Tabs
-        render_tabs::<B>(frame, main_chunks[1], app);
+        render_tabs(frame, main_chunks[1], app);
 
         // Content based on selected tab
         match app.tab_index {
-            0 => render_results_tab::<B>(frame, main_chunks[2], app),
-            1 => render_stats_tab::<B>(frame, main_chunks[2], app),
-            2 => render_diff_tab::<B>(frame, main_chunks[2], app),
-            3 => render_command_tab::<B>(frame, main_chunks[2], app),
-            4 => render_history_tab::<B>(frame, main_chunks[2], app),
+            0 => render_results_tab(frame, main_chunks[2], app),
+            1 => render_stats_tab(frame, main_chunks[2], app),
+            2 => render_diff_tab(frame, main_chunks[2], app),
+            3 => render_command_tab(frame, main_chunks[2], app),
+            4 => render_history_tab(frame, main_chunks[2], app),
             _ => {}
         }
 
         // Status bar
-        render_status_bar::<B>(frame, main_chunks[3]);
+        render_status_bar(frame, main_chunks[3]);
 
         // ポップアップがあれば表示
         if app.show_popup {
-            render_popup::<B>(frame, size, app);
+            render_popup(frame, size, app);
         }
 
         // 結果ポップアップがあれば表示
         if app.result_popup_visible {
-            render_result_popup::<B>(frame, size, app);
+            render_result_popup(frame, size, app);
         }
     }
 }
 
-fn render_title<B: Backend>(frame: &mut Frame, area: Rect) {
+fn render_title(frame: &mut Frame, area: Rect) {
     let title = Paragraph::new(vec![
         TextLine::from(vec![
             Span::styled(
@@ -116,8 +115,8 @@ fn render_title<B: Backend>(frame: &mut Frame, area: Rect) {
     frame.render_widget(title, area);
 }
 
-fn render_tabs<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
-    let titles = vec![
+fn render_tabs(frame: &mut Frame, area: Rect, app: &App) {
+    let titles = [
         "Test Results",
         "Statistics",
         "Diff View",
@@ -164,7 +163,7 @@ fn render_tabs<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(tabs, area);
 }
 
-fn render_results_tab<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
+fn render_results_tab(frame: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
@@ -345,7 +344,7 @@ fn render_results_tab<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
     }
 }
 
-fn render_stats_tab<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
+fn render_stats_tab(frame: &mut Frame, area: Rect, app: &App) {
     let (passed, total, pass_rate) = app.get_stats();
 
     let chunks = Layout::default()
@@ -465,7 +464,7 @@ fn render_stats_tab<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(canvas, chunks[1]);
 }
 
-fn render_diff_tab<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
+fn render_diff_tab(frame: &mut Frame, area: Rect, app: &App) {
     if let Some(test_result) = app.test_results.get(app.selected_test) {
         if let Some(diff) = &test_result.diff {
             // Create a unified diff view
@@ -552,7 +551,7 @@ fn render_diff_tab<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
     }
 }
 
-fn render_command_tab<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
+fn render_command_tab(frame: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
@@ -714,7 +713,7 @@ fn render_command_tab<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
     }
 }
 
-fn render_status_bar<B: Backend>(frame: &mut Frame, area: Rect) {
+fn render_status_bar(frame: &mut Frame, area: Rect) {
     let status_text = vec![
         Span::styled(
             "q",
@@ -770,7 +769,7 @@ fn render_status_bar<B: Backend>(frame: &mut Frame, area: Rect) {
     frame.render_widget(status_bar, area);
 }
 
-fn render_help<B: Backend>(frame: &mut Frame, area: Rect) {
+fn render_help(frame: &mut Frame, area: Rect) {
     let help_area = centered_rect(60, 60, area);
 
     let help_text = vec![
@@ -904,7 +903,7 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 }
 
 // 履歴表示モードのレンダリング
-fn render_history_tab<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
+fn render_history_tab(frame: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
@@ -1062,7 +1061,7 @@ fn render_history_tab<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 // ポップアップを表示する関数
-fn render_popup<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
+fn render_popup(frame: &mut Frame, area: Rect, app: &App) {
     let popup_area = centered_rect(50, 30, area);
 
     // 背景を描画（完全な黒）
@@ -1138,7 +1137,7 @@ fn render_popup<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
         PopupType::BuildToggle => vec![
             TextLine::from(""),
             TextLine::from(vec![Span::styled(
-                if app.config.build.as_ref().map_or(false, |b| b.release) {
+                if app.config.build.as_ref().is_some_and(|b| b.release) {
                     "Switch to DEBUG mode?"
                 } else {
                     "Switch to RELEASE mode?"
@@ -1148,7 +1147,7 @@ fn render_popup<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
                     .add_modifier(Modifier::BOLD),
             )]),
             TextLine::from(""),
-            TextLine::from(if app.config.build.as_ref().map_or(false, |b| b.release) {
+            TextLine::from(if app.config.build.as_ref().is_some_and(|b| b.release) {
                 "This will switch to debug mode for the next test run."
             } else {
                 "This will switch to release mode for the next test run."
@@ -1157,12 +1156,12 @@ fn render_popup<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
             TextLine::from(vec![
                 Span::styled("Current mode: ", Style::default().fg(Color::Gray)),
                 Span::styled(
-                    if app.config.build.as_ref().map_or(false, |b| b.release) {
+                    if app.config.build.as_ref().is_some_and(|b| b.release) {
                         "RELEASE"
                     } else {
                         "DEBUG"
                     },
-                    if app.config.build.as_ref().map_or(false, |b| b.release) {
+                    if app.config.build.as_ref().is_some_and(|b| b.release) {
                         Style::default()
                             .fg(Color::Magenta)
                             .add_modifier(Modifier::BOLD)
@@ -1236,7 +1235,7 @@ fn render_popup<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 // 結果ポップアップを表示する関数
-fn render_result_popup<B: Backend>(frame: &mut Frame, area: Rect, app: &App) {
+fn render_result_popup(frame: &mut Frame, area: Rect, app: &App) {
     let popup_area = centered_rect(40, 20, area);
 
     // 背景を描画（完全な黒）

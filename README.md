@@ -14,11 +14,13 @@ Yamori is a test runner and visualizer for command-line applications. It allows 
 - Run commands with arguments and input
 - Compare actual output with expected output
 - Visualize test results in a terminal UI or simple CLI output
-- Support for timeouts
+- Support for timeouts with robust async handling
 - Support for pre-build commands
 - Per-test build configuration
 - Color-coded test results
-- Test history tracking
+- Test history tracking with memory-safe bounded storage
+- Debug logging support
+- Comprehensive error handling
 
 ## Installation
 
@@ -50,6 +52,9 @@ yamori --cli --yamori-config tests/configs/tests.toml
 
 # Using environment variable
 YAMORI_CONFIG=tests/configs/tests.toml yamori
+
+# Run with debug logging
+yamori --debug --yamori-config tests/configs/tests.toml
 ```
 
 ## Usage

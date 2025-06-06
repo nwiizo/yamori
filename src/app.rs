@@ -1,5 +1,6 @@
 use crate::test::{TestConfig, TestResult};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use tracing::{debug, info, warn};
 
 // テスト実行の履歴を保存する構造体
 #[derive(Clone)]
@@ -36,6 +37,12 @@ pub enum PopupType {
 }
 
 impl App {
+    /// Maximum number of history entries to keep in memory
+    pub const MAX_HISTORY_ENTRIES: usize = 100;
+
+    /// Number of history entries to remove when max is reached
+    pub const HISTORY_CLEANUP_BATCH: usize = 10;
+
     pub fn new(test_results: Vec<TestResult>, config: TestConfig) -> Self {
         // 初期実行結果を履歴に追加
         let initial_history = TestHistory {
@@ -119,11 +126,20 @@ impl App {
     }
 
     #[allow(clippy::type_complexity)]
-    pub fn get_command_details(&self) -> Option<(&str, &[String], Option<&String>, u128, bool, Option<&Vec<String>>)> {
+    pub fn get_command_details(
+        &self,
+    ) -> Option<(
+        &str,
+        &[String],
+        Option<&String>,
+        u128,
+        bool,
+        Option<&Vec<String>>,
+    )> {
         if self.test_results.is_empty() {
             return None;
         }
-        
+
         let test = &self.test_results[self.selected_test];
         Some((
             &test.command,
@@ -131,7 +147,7 @@ impl App {
             test.input.as_ref(),
             test.execution_time.as_millis(),
             test.is_release,
-            test.build_commands.as_ref()
+            test.build_commands.as_ref(),
         ))
     }
 
@@ -145,8 +161,30 @@ impl App {
             release_mode: self.release_mode,
         };
 
+        // Check if we need to clean up old history entries
+        if self.history.len() >= Self::MAX_HISTORY_ENTRIES {
+            let removed_count = Self::HISTORY_CLEANUP_BATCH.min(self.history.len());
+            self.history.drain(0..removed_count);
+            warn!(
+                "History limit reached, removed {} old entries. Current count: {}",
+                removed_count,
+                self.history.len()
+            );
+
+            // Adjust selected_history if necessary
+            if self.selected_history >= removed_count {
+                self.selected_history -= removed_count;
+            } else {
+                self.selected_history = 0;
+            }
+        }
+
         self.history.push(history_entry);
         self.selected_history = self.history.len() - 1;
+        debug!(
+            "Added new history entry. Total entries: {}",
+            self.history.len()
+        );
     }
 
     pub fn toggle_history_view(&mut self) {
@@ -158,12 +196,7 @@ impl App {
     pub fn next_history(&mut self) {
         if !self.history.is_empty() {
             self.selected_history = (self.selected_history + 1) % self.history.len();
-            // 選択した履歴の結果を表示
-            if let Some(history) = self.history.get(self.selected_history) {
-                // 一時的に履歴の結果を表示
-                self.test_results = history.test_results.clone();
-                self.release_mode = history.release_mode;
-            }
+            debug!("Navigated to next history entry: {}", self.selected_history);
         }
     }
 
@@ -174,13 +207,28 @@ impl App {
             } else {
                 self.history.len() - 1
             };
-            // 選択した履歴の結果を表示
-            if let Some(history) = self.history.get(self.selected_history) {
-                // 一時的に履歴の結果を表示
-                self.test_results = history.test_results.clone();
-                self.release_mode = history.release_mode;
-            }
+            debug!(
+                "Navigated to previous history entry: {}",
+                self.selected_history
+            );
         }
+    }
+
+    /// Load selected history entry into current view (only when needed)
+    pub fn load_selected_history(&mut self) {
+        if let Some(history) = self.history.get(self.selected_history).cloned() {
+            info!(
+                "Loading history entry {} from timestamp {}",
+                self.selected_history, history.timestamp
+            );
+            self.test_results = history.test_results;
+            self.release_mode = history.release_mode;
+        }
+    }
+
+    /// Get reference to selected history without cloning
+    pub fn get_selected_history(&self) -> Option<&TestHistory> {
+        self.history.get(self.selected_history)
     }
 
     pub fn get_history_stats(&self) -> Vec<(u64, usize, usize, bool)> {

@@ -15,6 +15,8 @@ use crossterm::{
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::{env, io, path::PathBuf, time::Duration};
+use tracing::info;
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -30,23 +32,62 @@ struct Args {
     /// Run in CLI mode (no TUI)
     #[arg(short = 'c', long = "cli", default_value = "false")]
     cli_mode: bool,
+
+    /// Enable debug logging
+    #[arg(short = 'd', long = "debug", default_value = "false")]
+    debug: bool,
+}
+
+/// Initialize logging based on debug flag and environment
+fn init_logging(debug: bool) -> Result<()> {
+    let filter = if debug {
+        EnvFilter::new("yamori=debug,info")
+    } else {
+        // Check for RUST_LOG environment variable, default to warn level
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("yamori=warn"))
+    };
+
+    let subscriber = FmtSubscriber::builder()
+        .with_env_filter(filter)
+        .with_target(false)
+        .with_thread_ids(false)
+        .with_file(false)
+        .with_line_number(false)
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber)
+        .context("Failed to set tracing subscriber")?;
+
+    Ok(())
 }
 
 fn main() -> Result<()> {
-    // 環境変数 YAMORI_CONFIG から設定ファイルのパスを取得
-    let config_from_env = env::var("YAMORI_CONFIG").ok();
-
     // コマンドライン引数を解析
     let mut args = Args::parse();
 
+    // Initialize logging
+    init_logging(args.debug)?;
+
+    info!("Starting yamori v{}", env!("CARGO_PKG_VERSION"));
+
+    // 環境変数 YAMORI_CONFIG から設定ファイルのパスを取得
+    let config_from_env = env::var("YAMORI_CONFIG").ok();
+
     // 環境変数から設定ファイルのパスが指定されていれば、それを優先
     if let Some(config_path) = config_from_env {
+        info!(
+            "Using config file from YAMORI_CONFIG environment variable: {}",
+            config_path
+        );
         args.config = PathBuf::from(config_path);
+    } else {
+        info!("Using config file: {}", args.config.display());
     }
 
     // Check if CLI mode is enabled
     if args.cli_mode {
-        return cli::run_cli(args.config);
+        info!("Running in CLI mode");
+        return cli::run_cli(args.config).with_context(|| "CLI mode execution failed");
     }
 
     // コマンド出力を抑制
@@ -117,14 +158,14 @@ fn start_ui(
     loop {
         // 画面を描画
         terminal.draw(|frame| {
-            ui::render_ui::<CrosstermBackend<io::Stdout>>(frame, &app);
+            ui::render_ui(frame, &app);
         })?;
 
         // 結果ポップアップの更新（時間経過で消える）
         if app.update_result_popup() {
             // ポップアップの状態が変わったら再描画
             terminal.draw(|frame| {
-                ui::render_ui::<CrosstermBackend<io::Stdout>>(frame, &app);
+                ui::render_ui(frame, &app);
             })?;
         }
 
@@ -299,22 +340,26 @@ fn start_ui(
                             }
                         } else if app.tab_index == 4 {
                             // 履歴タブでEnterキーを押した場合、選択した履歴を表示
-                            if let Some(history) = app.history.get(app.selected_history) {
-                                app.test_results = history.test_results.clone();
-                                app.release_mode = history.release_mode;
+                            if app.get_selected_history().is_some() {
+                                info!("Loading history entry #{}", app.selected_history + 1);
+
+                                // Load selected history efficiently
+                                app.load_selected_history();
 
                                 // 結果タブに切り替え
                                 app.tab_index = 0;
 
                                 // 結果ポップアップを表示
-                                app.show_result_popup(format!(
-                                    "Loaded history entry #{}\nTimestamp: {}",
-                                    app.selected_history + 1,
-                                    chrono::Utc
-                                        .timestamp_opt(history.timestamp as i64, 0)
-                                        .unwrap()
-                                        .format("%Y-%m-%d %H:%M:%S")
-                                ));
+                                if let Some(history) = app.get_selected_history() {
+                                    app.show_result_popup(format!(
+                                        "Loaded history entry #{}\nTimestamp: {}",
+                                        app.selected_history + 1,
+                                        chrono::Utc
+                                            .timestamp_opt(history.timestamp as i64, 0)
+                                            .unwrap()
+                                            .format("%Y-%m-%d %H:%M:%S")
+                                    ));
+                                }
 
                                 reset_terminal(&mut terminal)?;
                             }
